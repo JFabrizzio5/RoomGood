@@ -6,7 +6,7 @@ App para hacer reservaciones de salas salones etc
   DataBase: Mysql
   IDEs:Netbeans and Vscode
 
-#Tecnologies
+# Tecnologies
   -Bootstrap
   -PHP
   -Ajax
