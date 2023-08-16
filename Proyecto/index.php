@@ -11,25 +11,48 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Crear un nuevo registro en la base de datos
-    $nombresala = $_POST["nombresala"];
-    $capacidad = $_POST["capacidad"];
-    $descripcionsala = $_POST["descripcionsala"];
-    $ubicacion = $_POST["ubicacion"];
+    if (isset($_POST["action"])) {
+        if ($_POST["action"] === "addSala") {
+            // Crear un nuevo registro en la base de datos
+            $nombresala = $_POST["nombresala"];
+            $capacidad = $_POST["capacidad"];
+            $descripcionsala = $_POST["descripcionsala"];
+            $ubicacion = $_POST["ubicacion"];
 
-    $sql = "INSERT INTO salas (nombresala, capacidad, descripcionsala, ubicacion) VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("siss", $nombresala, $capacidad, $descripcionsala, $ubicacion);
+            $sql = "INSERT INTO salas (nombresala, capacidad, descripcionsala, ubicacion) VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("siss", $nombresala, $capacidad, $descripcionsala, $ubicacion);
 
-    if ($stmt->execute()) {
-        $response = array("status" => "success", "message" => "Sala agregada exitosamente.");
-        echo json_encode($response);
-    } else {
-        $response = array("status" => "error", "message" => "Error al agregar la sala: " . $conn->error);
-        echo json_encode($response);
+            if ($stmt->execute()) {
+                $response = array("status" => "success", "message" => "Sala agregada exitosamente.");
+                echo json_encode($response);
+            } else {
+                $response = array("status" => "error", "message" => "Error al agregar la sala: " . $conn->error);
+                echo json_encode($response);
+            }
+
+            $stmt->close();
+            exit;
+        } elseif ($_POST["action"] === "deleteSala") {
+            // Eliminar un registro de la base de datos
+            $salaId = $_POST["salaId"];
+
+            $sql = "DELETE FROM salas WHERE id_sala = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $salaId);
+
+            if ($stmt->execute()) {
+                $response = array("status" => "success", "message" => "Sala eliminada exitosamente.");
+                echo json_encode($response);
+            } else {
+                $response = array("status" => "error", "message" => "Error al eliminar la sala: " . $conn->error);
+                echo json_encode($response);
+            }
+
+            $stmt->close();
+            exit;
+        }
     }
-
-    $stmt->close();
 } else {
     if ($_SERVER["REQUEST_METHOD"] === "GET" && isset($_GET["action"]) && $_GET["action"] === "getSalas") {
         // Leer registros de la base de datos
@@ -81,6 +104,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     url: "",
                     method: "POST",
                     data: {
+                        action: "addSala",
                         nombresala: nombresala,
                         capacidad: capacidad,
                         descripcionsala: descripcionsala,
@@ -120,9 +144,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         fila += "<td>" + sala.capacidad + "</td>";
                         fila += "<td>" + sala.descripcionsala + "</td>";
                         fila += "<td>" + sala.ubicacion + "</td>";
+                        fila += "<td><button class='eliminar-btn' data-sala-id='" + sala.id_sala + "'>Eliminar registro</button></td>";
                         fila += "</tr>";
 
                         $("#tabla-salas tbody").append(fila);
+                    }
+
+                    // Agregar evento click a los botones de eliminar
+                    $(".eliminar-btn").click(function() {
+                        var salaId = $(this).data("sala-id");
+                        eliminarRegistro(salaId);
+                    });
+                },
+                error: function(error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        function eliminarRegistro(salaId) {
+            $.ajax({
+                url: "",
+                method: "POST",
+                data: {
+                    action: "deleteSala",
+                    salaId: salaId
+                },
+                dataType: "json",
+                success: function(response) {
+                    if (response.status === "success") {
+                        alert(response.message);
+                        cargarRegistros();
+                    } else {
+                        alert(response.message);
                     }
                 },
                 error: function(error) {
@@ -145,7 +199,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <input type="number" id="capacidad" required>
         <br>
 
-        <label for="descripcionsala">Descripción de la sala:</label>
+       <label for="descripcionsala">Descripción de la sala:</label>
         <input type="text" id="descripcionsala" required>
         <br>
 
@@ -165,6 +219,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <th>Capacidad</th>
                 <th>Descripción de la Sala</th>
                 <th>Ubicación</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -176,6 +231,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 echo "<td>" . $sala['capacidad'] . "</td>";
                 echo "<td>" . $sala['descripcionsala'] . "</td>";
                 echo "<td>" . $sala['ubicacion'] . "</td>";
+                echo "<td><button class='eliminar-btn' data-sala-id='" . $sala['id_sala'] . "'>Eliminar registro</button></td>";
                 echo "</tr>";
             }
             ?>
